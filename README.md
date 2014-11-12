@@ -1,4 +1,4 @@
-pybx
+PyBX
 ====
 
 Python Branch eXchange
