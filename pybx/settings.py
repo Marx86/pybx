@@ -32,6 +32,8 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'apps.peer',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -55,7 +57,7 @@ WSGI_APPLICATION = 'pybx.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': os.path.join(BASE_DIR, '..', 'db.sqlite3'),
     }
 }
 
@@ -72,14 +74,18 @@ USE_L10N = True
 
 USE_TZ = True
 
+LANGUAGES = (
+    (u'Russian', 'ru'),
+    (u'English', 'en'),
+)
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.7/howto/static-files/
 
 STATIC_URL = '/static/'
 
-
 try:
-    from settings_local import *
+    from .settings_local import *
 except Exception:
-    print 'WARNING: File settings_local.py not found'
+    print('WARNING: File settings_local.py not found')
