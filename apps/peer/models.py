@@ -5,8 +5,18 @@ from django.utils.translation import ugettext as _
 from django.core.validators import MaxValueValidator
 
 
-yesno_choices = lambda param, yes, no: ((_('Enable %s' % param), yes),
-                                       (_('Disable %s' % param), no))
+yesno_choices = lambda param, yes, no: ((yes, _('Enable %s' % param)),
+                                       (no, _('Disable %s' % param)))
+
+
+class SubscriberManager(models.Manager):
+    def get_queryset(self):
+        return super(SubscriberManager, self).get_queryset().filter(is_peer=False)
+
+
+class PeerManager(models.Manager):
+    def get_queryset(self):
+        return super(PeerManager, self).get_queryset().filter(is_peer=True)
 
 
 class PeerParamsMixin(object):
@@ -74,71 +84,74 @@ class PeerParamsMixin(object):
     DYNAMIC_CHOICES = yesno_choices('dynamic', YES, NO)
 
     CALLINGPRES_CHOICES = (
-        (_('Allowed not screened'), ALLOWED_NOT_SCREENED),
-        (_('Allowed passed screen'), ALLOWED_PASSED_SCREEN),
-        (_('Allowed failed screen'), ALLOWED_FAILED_SCREEN),
-        (_('Allowed'), ALLOWED),
-        (_('Prohib not screened'), PROHIB_NOT_SCREENED),
-        (_('Prohib passed screen'), PROHIB_PASSED_SCREEN),
-        (_('Prohib failed screen'), PROHIB_FAILED_SCREEN),
-        (_('Prohib'), PROHIB),
-        (_('Unavailable'), UNAVAILABLE),
+        (ALLOWED_NOT_SCREENED, _('Allowed not screened')),
+        (ALLOWED_PASSED_SCREEN, _('Allowed passed screen')),
+        (ALLOWED_FAILED_SCREEN, _('Allowed failed screen')),
+        (ALLOWED, _('Allowed')),
+        (PROHIB_NOT_SCREENED, _('Prohib not screened')),
+        (PROHIB_PASSED_SCREEN, _('Prohib passed screen')),
+        (PROHIB_FAILED_SCREEN, _('Prohib failed screen')),
+        (PROHIB, _('Prohib')),
+        (UNAVAILABLE, _('Unavailable')),
     )
 
     TRANSPORT_CHOICES = (
-        (_('TCP'), TCP),
-        (_('UDP'), UDP),
-        (_('TCP and UDP'), TCP_UDP),
+        (TCP, _('TCP')),
+        (UDP, _('UDP')),
+        (TCP_UDP, _('TCP and UDP')),
     )
 
     NAT_CHOICES = (
-        (_('Enable NAT'), YES),
-        (_('Disable NAT'), NO),
-        (_('Never use NAT'), NEVER),
-        (_('Route'), ROUTE),
+        (YES, _('Enable NAT')),
+        (NO, _('Disable NAT')),
+        (NEVER, _('Never use NAT')),
+        (ROUTE, _('Route')),
     )
 
     DIRECTMEDIA_CHOICES = (
-        (_('Enable directmedia'), YES),
-        (_('Disable directmedia'), NO),
-        (_('No NAT'), NONAT),
-        (_('Update'), UPDATE),
+        (YES, _('Enable directmedia')),
+        (NO, _('Disable directmedia')),
+        (NONAT, _('No NAT')),
+        (UPDATE, _('Update')),
     )
 
     PROGRESSINBAND_CHOICES = (
-        (_('Enable progressinband'), YES),
-        (_('Disable progressinband'), NO),
-        (_('Never use progressinband'), NEVER),
+        (YES, _('Enable progressinband')),
+        (NO, _('Disable progressinband')),
+        (NEVER, _('Never use progressinband')),
     )
 
     TYPE_CHOICES = (
-        (_('User'), USER),
-        (_('Peer'), PEER),
-        (_('Friend'), FRIEND),
+        (USER, _('User')),
+        (PEER, _('Peer')),
+        (FRIEND, _('Friend')),
     )
 
     DTMFMODE_CHOICES = (
-        (_('rfc2833'), RFC2833),
-        (_('Info'), INFO),
-        (_('Short info'), SHORTINFO),
-        (_('Inband'), INBAND),
-        (_('Auto'), AUTO),
+        (RFC2833, _('rfc2833')),
+        (INFO, _('Info')),
+        (SHORTINFO, _('Short info')),
+        (INBAND, _('Inband'), ),
+        (AUTO, _('Auto')),
     )
 
     SESSION_TIMERS_CHOICES = (
-        (_('Accept'), ACCEPT),
-        (_('Refuse'), REFUSE),
-        (_('Originate'), ORIGINATE),
+        (ACCEPT, _('Accept')),
+        (REFUSE, _('Refuse')),
+        (ORIGINATE, _('Originate')),
     )
 
     SESSION_REFRESHER_CHOICES = (
-        (_('UAC'), UAC),
-        (_('UAS'), UAS),
+        (UAC, _('UAC')),
+        (UAS, _('UAS')),
     )
 
 
-class Subscriber(models.Model, PeerParamsMixin):
+class Peer(models.Model, PeerParamsMixin):
     user = models.ForeignKey(User, null=True, default=None, blank=True)
+    is_peer = models.BooleanField()
+
+    # Asterisk fields
     name = models.CharField(max_length=80, default='', unique=True, blank=True)
     username = models.CharField(max_length=80, default='', blank=True)
     context = models.CharField(max_length=80, null=True, default='default')
@@ -163,66 +176,77 @@ class Subscriber(models.Model, PeerParamsMixin):
     fromuser = models.CharField(max_length=80, null=True, default=None, blank=True)
     fromdomain = models.CharField(max_length=80, null=True, default=None, blank=True)
     insecure = models.CharField(max_length=40, null=True, default=None, blank=True)
-    language = models.CharField(max_length=4, null=True, default=None, blank=True, choices=settings.LANGUAGES)
+    language = models.CharField(max_length=4, null=True, default=settings.LANGUAGE_CODE,
+                                blank=True, choices=settings.LANGUAGES)
     mailbox = models.CharField(max_length=50, null=True, default=None, blank=True)
     pickupgroup = models.CharField(max_length=40, null=True, default=None, blank=True)
     qualify = models.CharField(max_length=40, null=True, default=None, blank=True)
     regexten = models.CharField(max_length=80, null=True, default=None, blank=True)
-    rtptimeout = models.IntegerField(max_length=11, null=True, default=None, blank=True)
-    rtpholdtimeout = models.IntegerField(max_length=11, null=True, default=None, blank=True)
+    rtptimeout = models.IntegerField(null=True, default=None, blank=True)
+    rtpholdtimeout = models.IntegerField(null=True, default=None, blank=True)
     setvar = models.CharField(max_length=100, null=True, default=None, blank=True)
     disallow = models.CharField(max_length=100, null=True, default='all')
     allow = models.CharField(max_length=100, null=True, default='g729;ilbc;gsm;ulaw;alaw')
     fullcontact = models.CharField(max_length=80, default='', blank=True)
     ipaddr = models.GenericIPAddressField(null=True, default='', blank=True)
     port = models.PositiveIntegerField(default=5060, validators=[MaxValueValidator(65535)])
-    # Field 'username' already exists in User model
     defaultuser = models.CharField(max_length=80, default='', blank=True)
     subscribecontext = models.CharField(max_length=80, null=True, default=None, blank=True)
     directmedia = models.CharField(max_length=6, choices=PeerParamsMixin.DIRECTMEDIA_CHOICES,
                                    null=True, default=PeerParamsMixin.NO)
-    trustrpid = models.CharField(max_length=3, choices=PeerParamsMixin.TRUSTRPID_CHOICES, null=True, default=None, blank=True)
-    sendrpid = models.CharField(max_length=3, choices=PeerParamsMixin.SENDRPID_CHOICES, null=True, default=None, blank=True)
+    trustrpid = models.CharField(max_length=3, choices=PeerParamsMixin.TRUSTRPID_CHOICES,
+                                null=True, default=None, blank=True)
+    sendrpid = models.CharField(max_length=3, choices=PeerParamsMixin.SENDRPID_CHOICES,
+                                null=True, default=None, blank=True)
     progressinband = models.CharField(max_length=5, choices=PeerParamsMixin.PROGRESSINBAND_CHOICES,
                                       null=True, default=None, blank=True)
-    promiscredir = models.CharField(max_length=3, choices=PeerParamsMixin.PROMISCREDIR_CHOICES, null=True, default=None, blank=True)
+    promiscredir = models.CharField(max_length=3, choices=PeerParamsMixin.PROMISCREDIR_CHOICES,
+                                    null=True, default=None, blank=True)
     useclientcode = models.CharField(max_length=3, choices=PeerParamsMixin.USECLIENTCODE_CHOICES,
                                       null=True, default=None, blank=True)
     accountcode = models.CharField(max_length=40, null=True, default=None, blank=True)
-    regseconds = models.IntegerField(max_length=11, default=0, blank=True)
+    regseconds = models.IntegerField(default=0, blank=True)
     regserver = models.CharField(max_length=100, null=True, default=None, blank=True)
     useragent = models.CharField(max_length=100, null=True, default=None, blank=True)
-    lastms = models.IntegerField(max_length=11, null=True, default=None, blank=True)
-    callcounter = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.CALLCOUNTER_CHOICES)
-    busylevel = models.IntegerField(max_length=11, null=True, default=None, blank=True)
-    allowoverlap = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.ALLOWOVERLAP_CHOICES)
+    lastms = models.IntegerField(null=True, default=None, blank=True)
+    callcounter = models.CharField(max_length=3, null=True, default=None, blank=True,
+                                    choices=PeerParamsMixin.CALLCOUNTER_CHOICES)
+    busylevel = models.IntegerField(null=True, default=None, blank=True)
+    allowoverlap = models.CharField(max_length=3, null=True, default=None, blank=True,
+                                    choices=PeerParamsMixin.ALLOWOVERLAP_CHOICES)
     allowsubscribe = models.CharField(max_length=3, null=True, default=None, blank=True,
                                       choices=PeerParamsMixin.ALLOWSUBSCRIBE_CHOICES)
-    videosupport = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.VIDEOSUPPORT_CHOICES)
-    maxcallbitrate = models.PositiveIntegerField(max_length=11, null=True, default=None, blank=True)
+    videosupport = models.CharField(max_length=3, null=True, default=None, blank=True,
+                                    choices=PeerParamsMixin.VIDEOSUPPORT_CHOICES)
+    maxcallbitrate = models.PositiveIntegerField(null=True, default=None, blank=True)
     rfc2833compensate = models.CharField(max_length=3, null=True, default=None, blank=True,
                                          choices=PeerParamsMixin.RFC2833COMPENSATE_CHOICES)
     session_timers = models.CharField(db_column='session-timers', max_length=9, null=True, default=None, blank=True,
                                       choices=PeerParamsMixin.SESSION_TIMERS_CHOICES)
-    session_expires = models.IntegerField(db_column='session-expires', max_length=11, null=True, default=None, blank=True)
-    session_minse = models.IntegerField(db_column='session-minse', max_length=11, null=True, default=None, blank=True)
-    session_refresher = models.CharField(db_column='session-refresher', max_length=3, null=True, default=None, blank=True,
-                                         choices=PeerParamsMixin.SESSION_REFRESHER_CHOICES)
+    session_expires = models.IntegerField(db_column='session-expires', null=True, default=None, blank=True)
+    session_minse = models.IntegerField(db_column='session-minse', null=True, default=None, blank=True)
+    session_refresher = models.CharField(db_column='session-refresher', max_length=3, null=True,
+                                         default=None, blank=True, choices=PeerParamsMixin.SESSION_REFRESHER_CHOICES)
     t38pt_usertpsource = models.CharField(max_length=40, null=True, default=None, blank=True)
     outboundproxy = models.CharField(max_length=40, null=True, default=None, blank=True)
     callbackextension = models.CharField(max_length=40, null=True, default=None, blank=True)
     registertrying = models.CharField(max_length=3, null=True, default=None, blank=True,
                                       choices=PeerParamsMixin.REGISTERTRYING_CHOICES)
-    timert1 = models.IntegerField(max_length=11, null=True, default=None, blank=True)
-    timerb = models.IntegerField(max_length=11, null=True, default=None, blank=True)
-    qualifyfreq = models.IntegerField(max_length=11, null=True, default=None, blank=True)
-    constantssrc = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.CONSTANTSSRC_CHOICES)
+    timert1 = models.IntegerField(null=True, default=None, blank=True)
+    timerb = models.IntegerField(null=True, default=None, blank=True)
+    qualifyfreq = models.IntegerField(null=True, default=None, blank=True)
+    constantssrc = models.CharField(max_length=3, null=True, default=None,
+                                    blank=True, choices=PeerParamsMixin.CONSTANTSSRC_CHOICES)
     contactpermit = models.CharField(max_length=40, null=True, default=None, blank=True)
     contactdeny = models.CharField(max_length=40, null=True, default=None, blank=True)
-    usereqphone = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.USEREQPHONE_CHOICES)
-    textsupport = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.TEXTSUPPORT_CHOICES)
-    faxdetect = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.FAXDETECT_CHOICES)
-    buggymwi = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.BUGGYMWI_CHOICES)
+    usereqphone = models.CharField(max_length=3, null=True, default=None,
+                                   blank=True, choices=PeerParamsMixin.USEREQPHONE_CHOICES)
+    textsupport = models.CharField(max_length=3, null=True, default=None,
+                                   blank=True, choices=PeerParamsMixin.TEXTSUPPORT_CHOICES)
+    faxdetect = models.CharField(max_length=3, null=True, default=None,
+                                 blank=True, choices=PeerParamsMixin.FAXDETECT_CHOICES)
+    buggymwi = models.CharField(max_length=3, null=True, default=None,
+                                blank=True, choices=PeerParamsMixin.BUGGYMWI_CHOICES)
     auth = models.CharField(max_length=100, default='md5', blank=True)
     fullname = models.CharField(max_length=150, default='', blank=True)
     trunkname = models.CharField(max_length=40, null=True, default=None, blank=True)
@@ -230,35 +254,64 @@ class Subscriber(models.Model, PeerParamsMixin):
     mohinterpret = models.CharField(max_length=40, null=True, default=None, blank=True)
     mohsuggest = models.CharField(max_length=40, null=True, default=None, blank=True)
     parkinglot = models.CharField(max_length=40, null=True, default=None, blank=True)
-    hasvoicemail = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.HASVOICEMAIL_CHOICES)
-    subscribemwi = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.SUBSCRIBEMWI_CHOICES)
+    hasvoicemail = models.CharField(max_length=3, null=True, default=None,
+                                    blank=True, choices=PeerParamsMixin.HASVOICEMAIL_CHOICES)
+    subscribemwi = models.CharField(max_length=3, null=True, default=None,
+                                    blank=True, choices=PeerParamsMixin.SUBSCRIBEMWI_CHOICES)
     vmexten = models.CharField(max_length=40, null=True, default=None, blank=True)
-    autoframing = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.AUTOFRAMING_CHOICES)
-    rtpkeepalive = models.PositiveIntegerField(max_length=11, null=True, default=None, blank=True)
-    call_limit = models.PositiveIntegerField(db_column='call-limit', max_length=11, null=True, default=None, blank=True)
+    autoframing = models.CharField(max_length=3, null=True, default=None, blank=True,
+                                   choices=PeerParamsMixin.AUTOFRAMING_CHOICES)
+    rtpkeepalive = models.PositiveIntegerField(null=True, default=None, blank=True)
+    call_limit = models.PositiveIntegerField(db_column='call-limit', null=True, default=None, blank=True)
     g726nonstandard = models.CharField(max_length=3, null=True, default=None, blank=True,
                                        choices=PeerParamsMixin.G726NONSTANDARD_CHOICES)
     ignoresdpversion = models.CharField(max_length=3, null=True, default=None, blank=True,
                                        choices=PeerParamsMixin.IGNORESDPVERSION_CHOICES)
     allowtransfer = models.CharField(max_length=3, null=True, default=None, blank=True,
                                      choices=PeerParamsMixin.ALLOWTRANSFER_CHOICES)
-    dynamic = models.CharField(max_length=3, null=True, default=None, blank=True, choices=PeerParamsMixin.DYNAMIC_CHOICES)
+    dynamic = models.CharField(max_length=3, null=True, default=None,
+                               blank=True, choices=PeerParamsMixin.DYNAMIC_CHOICES)
+
+    # Managers
+    objects = PeerManager()
+    objects_all = models.Manager()
 
 
     class Meta:
         index_together = [['ipaddr', 'port'], ['host', 'port']]
 
-    def __unicode__(self):
-        return self.username
+    def __repr__(self):
+        return u'{}: {} [{}]'.format(_('Peer'), self.fullname or self.username or self.name, self.callerid)
 
     def save(self, *args, **kwargs):
+        self.is_peer = kwargs.pop('is_peer', True)
+
         if not self.name:
-            self.name = self.user.username
+            if self.user:
+                self.name = self.user.username
+            else:
+                self.name = self.callerid
 
         if not self.username:
-            self.username = self.user.username
+            if self.user:
+                self.username = self.user.username
+            else:
+                self.username = self.callerid
 
-        if not self.fullname:
+        if not self.fullname and self.user:
             self.fullname = self.user.get_full_name()
 
-        return super(Subscriber, self).save(*args, **kwargs)
+        return super(Peer, self).save(*args, **kwargs)
+
+
+class Subscriber(Peer):
+    objects = SubscriberManager()
+
+    class Meta:
+        proxy = True
+
+    def save(self, *args, **kwargs):
+        return super(Subscriber, self).save(*args, is_peer=False, **kwargs)
+
+    def __repr__(self):
+        return u'{}: {} [{}]'.format(_('Subscriber'), self.fullname or self.username or self.name, self.callerid)

@@ -33,7 +33,10 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
+    'genericadmin',
+
     'apps.peer',
+    'apps.pbx',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -64,7 +67,7 @@ DATABASES = {
 # Internationalization
 # https://docs.djangoproject.com/en/1.7/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
 
 TIME_ZONE = 'UTC'
 
@@ -75,8 +78,8 @@ USE_L10N = True
 USE_TZ = True
 
 LANGUAGES = (
-    (u'Russian', 'ru'),
-    (u'English', 'en'),
+    ('en', u'Russian'),
+    ('ru', u'English'),
 )
 
 
